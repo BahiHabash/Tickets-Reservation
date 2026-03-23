@@ -1,8 +1,7 @@
 {
   "compilerOptions": {
-    "module": "nodenext",
-    "moduleResolution": "nodenext",
-    "resolvePackageJsonExports": true,
+    "module": "CommonJS",
+    "moduleResolution": "node",
     "esModuleInterop": true,
     "isolatedModules": true,
     "declaration": true,
@@ -20,6 +19,14 @@
     "forceConsistentCasingInFileNames": true,
     "noImplicitAny": false,
     "strictBindCallApply": false,
-    "noFallthroughCasesInSwitch": false
+    "noFallthroughCasesInSwitch": false,
+    "paths": {
+      "@Config": ["src/core/config/index.ts"],
+      "@Config/*": ["src/core/config/*"],
+      "@Common": ["src/common/index.ts"],
+      "@Common/*": ["src/common/*"],
+      "@Core": ["src/core/index.ts"],
+      "@Core/*": ["src/core/*"]
+    }
   }
 }
