@@ -1,39 +1,63 @@
 # Logger Sub-module
 
-Implements structured **Wide-Event** logging persisted to MongoDB.
+Implements structured **Wide-Event** logging persisted to MongoDB with a hierarchical schema.
 
 ## Responsibilities
 
-- **`WideEventLog` schema**: Mongoose model stored in the `logs` collection with fields for `traceId`, `level`, `action`, `userId`, `eventId`, `ticketId`, `durationMs`, `message`, and extensible `metadata`.
+- **`WideEventLog` schema**: Mongoose model stored in the `logs` collection.
+- **Hierarchical Context**: captures `user`, `client`, and `error` details in nested objects.
 - **`WideEventLoggerService`**: Implements NestJS `LoggerService`. Every log is written to MongoDB as a structured Wide Event (fire-and-forget) and printed to stdout/stderr.
 
 ## Usage
 
-### Standard NestJS logging (context only)
+The logger uses `AsyncLocalStorage` to maintain context throughout a request. Use `this.logger.assign()` to add data to the current Wide Event.
+
+### In Controllers (Business Action)
+Controllers define the high-level action and primary user context.
+
 ```typescript
-this.logger.log('Application started', 'Bootstrap');
+@Post('login')
+async login(@Body() loginDto: LoginUserDto) {
+  this.logger.assign({
+    action: LogAction.LOGIN,
+    user: { email: loginDto.email },
+    messages: [`Login attempt for ${loginDto.email}`],
+  });
+  return this.userService.login(loginDto);
+}
 ```
 
-### Structured Wide-Event logging (with payload)
+### In Services (Technical Traces)
+Services add granular execution steps to the `messages` array.
+
 ```typescript
-this.logger.warn(
-  'Seat reservation denied - Redis lock already held',
-  {
-    action: 'ACQUIRE_LOCK_FAILED',
-    userId: 'usr_998',
-    eventId: 'evt_55',
-    ticketId: 'TKT-55-12',
-    durationMs: 42,
+async hashPassword(password: string): Promise<string> {
+  this.logger.assign({
+    messages: [`Hashing password Attempt`],
+  });
+  return bcrypt.hash(password, 10);
+}
+```
+
+### Capturing Auth Context
+Once a user is authenticated, populate the full user object.
+
+```typescript
+this.logger.assign({
+  user: {
+    id: user._id.toString(),
+    email: user.email,
+    role: user.role,
   },
-  'TicketingService',
-);
+});
 ```
 
 ## ⚠️ Mandatory Usage
 
 The `WideEventLoggerService` is the **exclusive** logging mechanism for this project.
 
-- Do NOT use `console.log` or the default NestJS `Logger`.
-- Mandatory for: Error handling, Payment flows, Inventory changes, and performance timing.
-- All logs are queryable in MongoDB for production audit trails.
+- **Do NOT** use `console.log`.
+- **Use `LogAction` enums** for the `action` field to ensure consistency.
+- **Controllers** should set the `action` and high-level `user` context.
+- **Services** should use `messages` for technical "breadcrumbs" within the operation.
 
