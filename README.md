@@ -1,98 +1,89 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Tickets Reservation Engine
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+A professional high-performance NestJS-based backend for high-concurrency ticket booking and real-time inventory management.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## 🏗️ Architecture Overview
 
-## Description
+The project follows a modular architecture designed for scalability and maintainability:
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+- **`src/common`**: Project-wide utility types, decorators, and centralized enums (e.g., `NodeEnv`, `LogLevel`). Always use these shared constants.
+- **`src/core`**: The infrastructure backbone. Managed by the `CoreModule`, it handles all non-business concerns (Config, DB, Redis, Logging).
+- **`src/modules`**: (Under development) Will contain business-specific modules (Users, Events, Bookings, Payments).
 
-## Project setup
+## 🚀 Core Infrastructure
 
-```bash
-$ npm install
+All infrastructure logic is encapsulated within the `CoreModule` and its specialized sub-modules:
+
+| Sub-module | Purpose | Global? |
+|------------|---------|---------|
+| **Config** | Robust environment validation (via Joi) and namespaced configurations. | ✅ |
+| **Database** | Managed MongoDB connection and base abstract repositories for DAL. | ❌ |
+| **Redis** | High-performance `ioredis` client for distributed locking and caching. | ✅ |
+| **Logger** | **Mandatory** structured Wide-Event logging system. | ✅ |
+
+### Using Core Services
+Since most core modules are global, you can inject their services directly into any provided class:
+```typescript
+constructor(private readonly appConfig: AppConfig) {}
 ```
 
-## Compile and run the project
+## 📝 Logging Strategy
 
-```bash
-# development
-$ npm run start
+**Strict Requirement**: Every log in the system must use the `WideEventLoggerService` (exported via `LoggerModule`).
 
-# watch mode
-$ npm run start:dev
+### Why?
+Unlike default string-based loggers, this service persists **Structured Wide Events** to MongoDB. This enables complex auditing, performance tracking, and troubleshooting without manual log parsing.
 
-# production mode
-$ npm run start:prod
+### How to Use
+Always inject `WideEventLoggerService` or use it as the default NestJS logger:
+
+```typescript
+// 1. Context logging (simulating standard logger)
+this.logger.log('Payment processed', 'PaymentsService');
+
+// 2. Structured logging (Mandatory for critical paths)
+this.logger.warn('Inventory threshold reached', {
+  action: 'LOW_INVENTORY_DETECTED',
+  eventId: 'evt_123',
+  metadata: { stockLeft: 5 }
+}, 'InventoryService');
 ```
 
-## Run tests
+## 🛠️ Project Setup
 
+### 1. Prerequisites
+- Node.js v20.17+
+- Docker & Docker Compose
+
+### 2. Infrastructure
+Spin up the required infrastructure (Redis) using Docker Compose:
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+docker-compose up -d
 ```
 
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
+### 3. Installation
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+npm install
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+### 4. Running
+```bash
+# Development (with watch mode)
+npm run start:dev
 
-## Resources
+# Production
+npm run build
+npm run start:prod
+```
 
-Check out a few resources that may come in handy when working with NestJS:
+## 🧪 Verification
+```bash
+# Unit tests
+npm test
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+# E2E tests
+npm run test:e2e
+```
 
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+## 📜 License
+Unlicensed (Private Project)
