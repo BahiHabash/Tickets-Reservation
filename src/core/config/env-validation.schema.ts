@@ -10,6 +10,10 @@ export const envValidationSchema = Joi.object({
   BASE_URL: Joi.string().uri().default('http://localhost'),
   API_VERSION: Joi.string().default('api/v1'),
 
+  // Logging
+  LOG_P99_THRESHOLD_MS: Joi.number().default(1000),
+  LOG_SAMPLING_RATE: Joi.number().default(0.03),
+
   // Database
   MONGO_URI: Joi.string().required().messages({
     'any.required':
@@ -23,4 +27,10 @@ export const envValidationSchema = Joi.object({
 
   // Ticket reservation
   TICKET_HOLDING_TTL: Joi.string().default('10m'),
+
+  // JWT
+  JWT_ACCESS_SECRET: Joi.string().required().messages({
+    'any.required': 'JWT_SECRET is required — provide a secret key',
+  }),
+  JWT_EXPIRATION: Joi.string().default('1h'),
 });

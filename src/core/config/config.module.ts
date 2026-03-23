@@ -1,6 +1,11 @@
 import { Module, Global } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { AppConfig, DatabaseConfig, RedisConfig } from './configurations';
+import {
+  AppConfig,
+  DatabaseConfig,
+  RedisConfig,
+  TokenConfig,
+} from './configurations';
 import { envValidationSchema } from './env-validation.schema';
 
 @Global()
@@ -15,7 +20,7 @@ import { envValidationSchema } from './env-validation.schema';
       },
     }),
   ],
-  providers: [AppConfig, DatabaseConfig, RedisConfig],
-  exports: [AppConfig, DatabaseConfig, RedisConfig],
+  providers: [AppConfig, DatabaseConfig, RedisConfig, TokenConfig],
+  exports: [AppConfig, DatabaseConfig, RedisConfig, TokenConfig],
 })
 export class AppConfigModule {}
