@@ -1,0 +1,21 @@
+import { Module, Global } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
+import { AppConfig, DatabaseConfig, RedisConfig } from './configurations';
+import { envValidationSchema } from './env-validation.schema';
+
+@Global()
+@Module({
+  imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: `.env`,
+      validationSchema: envValidationSchema,
+      validationOptions: {
+        abortEarly: true,
+      },
+    }),
+  ],
+  providers: [AppConfig, DatabaseConfig, RedisConfig],
+  exports: [AppConfig, DatabaseConfig, RedisConfig],
+})
+export class AppConfigModule {}

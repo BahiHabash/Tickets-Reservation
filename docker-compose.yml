@@ -1,0 +1,13 @@
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: tickets-redis
+    ports:
+      - '6379:6379'
+    command: redis-server --requirepass redis_secret
+    volumes:
+      - redis-data:/data
+
+volumes:
+  mongo-data:
+  redis-data:
