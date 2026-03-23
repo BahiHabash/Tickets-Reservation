@@ -1,155 +1,208 @@
-import { Injectable, LoggerService } from '@nestjs/common';
-import { LogLevel } from '../../common/enums/log-level.enum';
+import {
+  ConsoleLogger,
+  Injectable,
+  LoggerService,
+  OnModuleInit,
+} from '@nestjs/common';
+import { LogLevel } from '../../common/enums/logs.enum';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
-import { randomUUID } from 'crypto';
+import { Model } from 'mongoose';
+import { AsyncLocalStorage } from 'async_hooks';
 import { WideEventLog, WideEventLogDocument } from './wide-event.schema';
 
-interface WideEventPayload {
+export interface WideEventPayload {
+  requestId: string;
+  env: string;
+  service?: string;
   action?: string;
-  userId?: Types.ObjectId;
-  eventId?: Types.ObjectId;
-  ticketId?: Types.ObjectId;
+  context?: string;
+  method?: string;
+  path?: string;
+  statusCode?: number;
+  outcome?: string;
   durationMs?: number;
-  traceId?: string;
+  user?: {
+    id?: string;
+    email?: string;
+    role?: string;
+  };
+  client?: {
+    ip: string;
+    userAgent: string;
+  };
+  error?: {
+    type: string;
+    message: string[];
+    stack?: string;
+  };
+  messages?: string[];
+  metadata?: Record<string, unknown>;
   [key: string]: unknown;
 }
 
+export interface WideEventContext {
+  traceId: string;
+  requestId: string;
+  env: string;
+  startTime: [number, number];
+  payload: WideEventPayload;
+  level: LogLevel;
+}
+
 @Injectable()
-export class WideEventLoggerService implements LoggerService {
+export class WideEventLoggerService
+  extends ConsoleLogger
+  implements LoggerService, OnModuleInit
+{
+  public static readonly storage = new AsyncLocalStorage<WideEventContext>();
+
   constructor(
     @InjectModel(WideEventLog.name)
     private readonly logModel: Model<WideEventLogDocument>,
-  ) {}
-
-  log(message: string, context?: string): void;
-  log(message: string, payload?: WideEventPayload, context?: string): void;
-  log(
-    message: string,
-    payloadOrContext?: WideEventPayload | string,
-    context?: string,
-  ): void {
-    const { payload, ctx } = this.parseArgs(payloadOrContext, context);
-    this.persist(LogLevel.LOG, message, ctx, payload);
-    this.writeToStdout('LOG', message, ctx);
+  ) {
+    super();
   }
 
-  error(message: string, trace?: string, context?: string): void;
-  error(message: string, payload?: WideEventPayload, context?: string): void;
-  error(
-    message: string,
-    traceOrPayload?: string | WideEventPayload,
-    context?: string,
-  ): void {
-    const { payload, ctx } = this.parseArgs(traceOrPayload, context);
-    this.persist(LogLevel.ERROR, message, ctx, payload);
-    this.writeToStderr('ERROR', message, ctx);
+  onModuleInit() {
+    this.log('WideEventLoggerService initialized', 'Logger');
   }
 
-  warn(message: string, context?: string): void;
-  warn(message: string, payload?: WideEventPayload, context?: string): void;
-  warn(
-    message: string,
-    payloadOrContext?: WideEventPayload | string,
-    context?: string,
-  ): void {
-    const { payload, ctx } = this.parseArgs(payloadOrContext, context);
-    this.persist(LogLevel.WARN, message, ctx, payload);
-    this.writeToStdout('WARN', message, ctx);
+  /**
+   * Returns the current Wide Event context if it exists.
+   */
+  getStore(): WideEventContext | undefined {
+    return WideEventLoggerService.storage.getStore();
   }
 
-  debug(message: string, context?: string): void;
-  debug(message: string, payload?: WideEventPayload, context?: string): void;
-  debug(
-    message: string,
-    payloadOrContext?: WideEventPayload | string,
-    context?: string,
-  ): void {
-    const { payload, ctx } = this.parseArgs(payloadOrContext, context);
-    this.persist(LogLevel.DEBUG, message, ctx, payload);
-    this.writeToStdout('DEBUG', message, ctx);
+  /**
+   * Runs a function within a new Wide Event context.
+   */
+  run<T>(context: WideEventContext, fn: () => T): T {
+    return WideEventLoggerService.storage.run(context, fn);
   }
 
-  verbose(message: string, context?: string): void;
-  verbose(message: string, payload?: WideEventPayload, context?: string): void;
-  verbose(
-    message: string,
-    payloadOrContext?: WideEventPayload | string,
-    context?: string,
-  ): void {
-    const { payload, ctx } = this.parseArgs(payloadOrContext, context);
-    this.persist(LogLevel.VERBOSE, message, ctx, payload);
-    this.writeToStdout('VERBOSE', message, ctx);
-  }
+  /**
+   * Adds metadata or identifiers to the current Wide Event context.
+   */
+  assign(payload: Partial<WideEventPayload>): void {
+    const context = this.getStore();
+    if (context) {
+      const { metadata, messages, ...rest } = payload;
+      context.payload = {
+        ...context.payload,
+        ...rest,
+        messages: messages
+          ? [...(context.payload.messages || []), ...messages]
+          : context.payload.messages,
+        metadata: {
+          ...context.payload.metadata,
+          ...metadata,
+        },
+      };
 
-  fatal(message: string, context?: string): void;
-  fatal(message: string, payload?: WideEventPayload, context?: string): void;
-  fatal(
-    message: string,
-    payloadOrContext?: WideEventPayload | string,
-    context?: string,
-  ): void {
-    const { payload, ctx } = this.parseArgs(payloadOrContext, context);
-    this.persist(LogLevel.FATAL, message, ctx, payload);
-    this.writeToStderr('FATAL', message, ctx);
-  }
-
-  // ── Private helpers ──────────────────────────────────────────────
-
-  private parseArgs(
-    payloadOrContext?: WideEventPayload | string,
-    context?: string,
-  ): { payload: WideEventPayload; ctx?: string } {
-    if (typeof payloadOrContext === 'string') {
-      return { payload: {}, ctx: payloadOrContext };
+      // Ensure level is upgraded if needed
+      if (
+        rest.level &&
+        this.isMoreSevere(rest.level as LogLevel, context.level)
+      ) {
+        context.level = rest.level as LogLevel;
+      }
     }
-    return { payload: payloadOrContext || {}, ctx: context };
   }
 
-  private persist(
-    level: LogLevel,
-    message: string,
-    context?: string,
-    payload: WideEventPayload = {},
-  ): void {
-    const { action, userId, eventId, ticketId, durationMs, traceId, ...rest } =
-      payload;
+  /**
+   * Persists the Wide Event to MongoDB.
+   */
+  async persist(context: WideEventContext): Promise<void> {
+    const { payload, level } = context;
+    const {
+      action,
+      durationMs,
+      context: pContext,
+      level: pLevel,
+      method: pMethod,
+      path: pPath,
+      statusCode: pStatusCode,
+      outcome: pOutcome,
+      user: pUser,
+      client: pClient,
+      error: pError,
+      messages: pMessages,
+      metadata,
+      ...rest
+    } = payload;
 
     const doc: Partial<WideEventLog> = {
-      traceId: traceId || randomUUID(),
-      userId: userId,
-      eventId: eventId,
+      traceId: context.traceId,
+      requestId: context.requestId,
+      env: context.env,
       timestamp: new Date(),
-      level,
-      message,
-      context,
-      action,
-      ticketId,
+      level: (pLevel as LogLevel) || level || LogLevel.LOG,
+      context: (pContext as string) || (payload.context as string),
+      action: action as string,
+      method: pMethod as string,
+      path: pPath as string,
+      statusCode: pStatusCode as number,
+      outcome: pOutcome as string,
       durationMs,
+      user: pUser,
+      client: pClient,
+      error: pError,
+      messages: pMessages || payload.messages || [],
       metadata:
-        Object.keys(rest).length > 0
-          ? new Map(Object.entries(rest))
+        Object.keys({ ...metadata, ...rest }).length > 0
+          ? new Map(Object.entries({ ...metadata, ...rest }))
           : undefined,
     };
 
-    // Fire-and-forget write — never block the request pipeline
-    this.logModel.create(doc).catch(() => {
-      // Fallback: if DB write fails, write to stderr so logs aren't lost
+    try {
+      await this.logModel.create(doc);
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+
       process.stderr.write(
-        `[LoggerFallback] Failed to persist log: ${JSON.stringify(doc)}\n`,
+        `[LoggerFallback] Failed to persist log: ${errorMessage}\n`,
       );
-    });
+    }
   }
 
-  private writeToStdout(level: string, message: string, ctx?: string): void {
-    const timestamp = new Date().toISOString();
-    const prefix = ctx ? `[${ctx}]` : '';
-    process.stdout.write(`${timestamp} ${level} ${prefix} ${message}\n`);
+  /**
+   * Outputs the Wide Event as a JSON object to the console.
+   */
+  logEvent(context: WideEventContext): void {
+    const { level, statusCode } = context.payload; // Extract level and statusCode from payload
+    const logObject = {
+      timestamp: new Date().toISOString(),
+      level: context.level,
+      ...context.payload,
+      traceId: context.traceId,
+      requestId: context.requestId,
+      env: context.env,
+    };
+
+    // Use JSON.stringify for machine-readable output as requested
+    // 1. Always keep errors: 100% of 500s, exceptions, and failures
+    if (
+      level === LogLevel.ERROR ||
+      level === LogLevel.FATAL ||
+      (statusCode && statusCode >= 500)
+    ) {
+      process.stderr.write(`${JSON.stringify(logObject)}\n`);
+    } else {
+      process.stdout.write(`${JSON.stringify(logObject)}\n`);
+    }
   }
 
-  private writeToStderr(level: string, message: string, ctx?: string): void {
-    const timestamp = new Date().toISOString();
-    const prefix = ctx ? `[${ctx}]` : '';
-    process.stderr.write(`${timestamp} ${level} ${prefix} ${message}\n`);
+  private isMoreSevere(newLevel: LogLevel, currentLevel: LogLevel): boolean {
+    const priority = {
+      [LogLevel.VERBOSE]: 0,
+      [LogLevel.DEBUG]: 1,
+      [LogLevel.LOG]: 2,
+      [LogLevel.WARN]: 3,
+      [LogLevel.ERROR]: 4,
+      [LogLevel.FATAL]: 5,
+    };
+    return priority[newLevel] > priority[currentLevel];
   }
 }

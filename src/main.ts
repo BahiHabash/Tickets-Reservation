@@ -9,12 +9,12 @@ async function bootstrap() {
     bufferLogs: true,
   });
 
+  // App configurations class
+  const appConfig = app.get(AppConfig);
+
   // Custom logger
   const logger = app.get(WideEventLoggerService);
   app.useLogger(logger);
-
-  // App configurations class
-  const appConfig = app.get(AppConfig);
 
   // Global prefix from config (e.g. "api/v1")
   app.setGlobalPrefix(appConfig.apiVersion);
