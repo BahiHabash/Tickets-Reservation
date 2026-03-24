@@ -43,8 +43,10 @@ lerna-debug.log*
 .env.local
 
 # temp directory
+/tmp
 .temp
 .tmp
+*.log
 
 # Runtime data
 pids
@@ -56,4 +58,5 @@ pids
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 # Agents
+/.agent
 /.agents

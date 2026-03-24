@@ -20,13 +20,6 @@
     "noImplicitAny": false,
     "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false,
-    "paths": {
-      "@Config": ["src/core/config/index.ts"],
-      "@Config/*": ["src/core/config/*"],
-      "@Common": ["src/common/index.ts"],
-      "@Common/*": ["src/common/*"],
-      "@Core": ["src/core/index.ts"],
-      "@Core/*": ["src/core/*"]
-    }
+    "paths": {}
   }
 }

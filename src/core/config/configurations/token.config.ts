@@ -29,7 +29,7 @@ export class TokenConfig {
   }
 
   /**
-   * Convert TTL to milliseconds
+   * Convert TTL to seconds (as expected by @nestjs/jwt signOptions)
    */
   private convertTTLToMilliseconds(ttl: StringValue): number {
     return ms(ttl);
