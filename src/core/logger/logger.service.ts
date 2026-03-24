@@ -30,6 +30,13 @@ export interface WideEventPayload {
     ip: string;
     userAgent: string;
   };
+  event?: {
+    id?: string;
+    title?: string;
+    date?: string;
+    price?: number;
+    totalCapacity?: number;
+  };
   error?: {
     type: string;
     message: string[];
@@ -126,6 +133,7 @@ export class WideEventLoggerService
       outcome: pOutcome,
       user: pUser,
       client: pClient,
+      event: pEvent,
       error: pError,
       messages: pMessages,
       metadata,
@@ -147,6 +155,7 @@ export class WideEventLoggerService
       durationMs,
       user: pUser,
       client: pClient,
+      event: pEvent,
       error: pError,
       messages: pMessages || payload.messages || [],
       metadata:

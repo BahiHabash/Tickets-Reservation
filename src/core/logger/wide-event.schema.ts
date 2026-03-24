@@ -38,6 +38,24 @@ class ErrorLogInfo {
   stack?: string;
 }
 
+@Schema({ _id: false })
+class EventLogInfo {
+  @Prop({ type: String })
+  id?: string;
+
+  @Prop({ type: String })
+  title?: string;
+
+  @Prop({ type: String })
+  date?: string;
+
+  @Prop({ type: Number })
+  price?: number;
+
+  @Prop({ type: Number })
+  totalCapacity?: number;
+}
+
 @Schema({
   collection: 'logs',
   timestamps: false,
@@ -93,6 +111,9 @@ export class WideEventLog {
   @Prop({ type: ErrorLogInfo })
   error?: ErrorLogInfo;
 
+  @Prop({ type: EventLogInfo })
+  event?: EventLogInfo;
+
   @Prop({ type: [String] })
   messages?: string[];
 
@@ -101,9 +122,6 @@ export class WideEventLog {
 
   @Prop({ type: Types.ObjectId })
   ticketId?: Types.ObjectId;
-
-  @Prop({ type: Types.ObjectId })
-  eventId?: Types.ObjectId;
 
   @Prop({ type: Types.ObjectId })
   paymentId?: Types.ObjectId;
