@@ -5,15 +5,17 @@ import {
   Get,
   UseGuards,
   Request,
-  NotFoundException,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { RegisterUserDto } from './dto/register-user.dto';
 import { LoginUserDto } from './dto/login-user.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import type { RequestWithUser } from '../../common/interfaces';
+import type { Payload } from '../../common/interfaces';
 import { WideEventLoggerService } from '../../core/logger';
 import { LogAction } from '../../common/enums/logs.enum';
+import { GetUser } from './decorators/get-user.decorator';
+import { UserRole } from '../../common/enums/user-role.enum';
+import { Roles } from './decorators/roles.decorator';
 
 @Controller('users')
 export class UserController {
@@ -27,7 +29,7 @@ export class UserController {
     this.logger.assign({
       action: LogAction.REGISTER,
       user: { email: registerDto.email },
-      messages: [`Registration attempt for ${registerDto.email}`],
+      messages: [`Registration request received.`],
     });
     return this.userService.register(registerDto);
   }
@@ -37,40 +39,39 @@ export class UserController {
     this.logger.assign({
       action: LogAction.LOGIN,
       user: { email: loginDto.email },
-      messages: [`Login attempt for ${loginDto.email}`],
+      messages: [`Login request received.`],
     });
     return this.userService.login(loginDto);
   }
 
   @UseGuards(JwtAuthGuard)
   @Get('profile')
-  async getProfile(@Request() req: RequestWithUser) {
+  async getProfile(@GetUser() user: Payload) {
     this.logger.assign({
       action: LogAction.GET_PROFILE,
       user: {
-        id: req.user.sub,
-        email: req.user.email,
-        role: req.user.role,
+        id: user.sub,
+        email: user.email,
+        role: user.role,
       },
-      messages: [`Fetching profile for ${req.user.sub}`],
+      messages: [`Fetch profile request received.`],
     });
 
-    const user = await this.userService.getProfile(req.user.sub);
-
-    if (!user) {
-      this.logger.assign({
-        messages: [`User not found`],
-      });
-      throw new NotFoundException('User not found');
-    }
-    return user;
+    return this.userService.getProfile(user.sub);
   }
 
   @Get()
-  async getAllUsers() {
+  @UseGuards(JwtAuthGuard)
+  @Roles(UserRole.ADMIN)
+  async getAllUsers(@GetUser() user: Payload) {
     this.logger.assign({
       action: LogAction.GET_ALL_USERS,
-      messages: [`Fetching all users`],
+      user: {
+        id: user.sub,
+        email: user.email,
+        role: user.role,
+      },
+      messages: [`Fetch all users request received.`],
     });
     return await this.userService.findAll();
   }

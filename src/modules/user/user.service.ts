@@ -2,15 +2,18 @@ import {
   Injectable,
   UnauthorizedException,
   ConflictException,
+  NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { User } from './schemas/user.schema';
+import { UserRole } from '../../common/enums/user-role.enum';
 import { RegisterUserDto } from './dto/register-user.dto';
 import { LoginUserDto } from './dto/login-user.dto';
 import { WideEventLoggerService } from '../../core/logger';
+import type { Payload } from '../../common/interfaces/auth-token.interface';
 
 @Injectable()
 export class UserService {
@@ -21,9 +24,10 @@ export class UserService {
   ) {}
 
   async register(registerDto: RegisterUserDto) {
-    const { email, password } = registerDto;
+    const { email, password, role } = registerDto;
 
     const existingUser = await this.userModel.findOne({ email });
+
     if (existingUser) {
       this.logger.assign({ messages: ['User already exists'] });
       throw new ConflictException('User already exists');
@@ -33,9 +37,11 @@ export class UserService {
     const user: User = new this.userModel({
       email,
       password: hashedPassword,
+      role: (role as UserRole) || UserRole.USER,
     });
 
     await user.save();
+
     this.logger.assign({
       user: {
         id: user._id.toString(),
@@ -44,6 +50,7 @@ export class UserService {
       },
       messages: ['User registered successfully'],
     });
+
     return { message: 'User registered successfully' };
   }
 
@@ -66,25 +73,56 @@ export class UserService {
       messages: ['Authentication successful'],
     });
 
-    const payload = { sub: user._id, email: user.email, role: user.role };
+    const payload = {
+      sub: user._id,
+      email: user.email,
+      role: user.role,
+    };
+
     return {
       access_token: await this.jwtService.signAsync(payload),
     };
   }
 
   async getProfile(userId: string): Promise<User | null> {
-    const user = await this.userModel.findById(userId);
-    return user;
+    this.logger.assign({ messages: ['Fetching user profile from database'] });
+
+    const userProfile = await this.userModel.findById(userId);
+
+    if (!userProfile) {
+      this.logger.assign({ messages: ['User not found'] });
+      throw new NotFoundException('User not found');
+    }
+
+    this.logger.assign({
+      user: {
+        id: userProfile._id.toString(),
+        email: userProfile.email,
+        role: userProfile.role,
+      },
+      messages: ['Profile fetched successfully'],
+    });
+
+    return userProfile;
   }
 
   async findAll(): Promise<User[]> {
-    return this.userModel.find();
+    this.logger.assign({ messages: ['Fetching all users from database'] });
+
+    const users = await this.userModel.find();
+
+    this.logger.assign({
+      messages: [`Users fetched successfully. Count: ${users.length}`],
+    });
+
+    return users;
   }
 
   async hashPassword(password: string): Promise<string> {
     this.logger.assign({
       messages: [`Hashing password Attempt`],
     });
+
     return bcrypt.hash(password, 10);
   }
 
@@ -92,6 +130,15 @@ export class UserService {
     this.logger.assign({
       messages: [`Comparing password Attempt`],
     });
+
     return bcrypt.compare(password, hash);
+  }
+
+  async getAccessToken(payload: Payload): Promise<string> {
+    this.logger.assign({
+      messages: [`Generating access token`],
+    });
+
+    return this.jwtService.signAsync(payload);
   }
 }
