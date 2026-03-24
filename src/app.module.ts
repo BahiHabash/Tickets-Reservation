@@ -2,9 +2,10 @@ import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
 import { CoreModule } from './core/core.module';
 import { LoggerMiddleware } from './core/logger/logger.middleware';
 import { UserModule } from './modules/user/user.module';
+import { EventModule } from './modules/event/event.module';
 
 @Module({
-  imports: [CoreModule, UserModule],
+  imports: [CoreModule, UserModule, EventModule],
   controllers: [],
   providers: [],
 })
