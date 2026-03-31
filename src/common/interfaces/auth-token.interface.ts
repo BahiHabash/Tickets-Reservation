@@ -1,5 +1,5 @@
 import { Request } from 'express';
-import { UserRole } from '../enums/user-role.enum';
+import { UserRole } from '../../modules/user/enums/user-role.enum';
 
 export interface RequestWithUser extends Request {
   user: Payload;

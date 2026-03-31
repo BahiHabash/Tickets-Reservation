@@ -1,14 +1,14 @@
 import { Injectable, NestMiddleware } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
-import { WideEventLoggerService, WideEventContext } from './logger.service';
+import { LoggingService, LoggingContext } from './logging.service';
 import { randomUUID } from 'crypto';
 import { AppConfig } from '../config';
 import { LogLevel } from '../../common/enums/logs.enum';
 
 @Injectable()
-export class LoggerMiddleware implements NestMiddleware {
+export class LoggingMiddleware implements NestMiddleware {
   constructor(
-    private readonly logger: WideEventLoggerService,
+    private readonly logger: LoggingService,
     private readonly appConfig: AppConfig,
   ) {}
 
@@ -22,7 +22,7 @@ export class LoggerMiddleware implements NestMiddleware {
           ? req.headers['x-request-id'][0]
           : undefined) || randomUUID();
 
-    const context: WideEventContext = {
+    const context: LoggingContext = {
       traceId: randomUUID(),
       requestId,
       env: this.appConfig.nodeEnv,

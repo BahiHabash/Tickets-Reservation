@@ -16,14 +16,15 @@ import Redis from 'ioredis';
 import { REDIS_CLIENT } from '../core/redis/index.js';
 
 @Injectable()
-export class TicketingService {
+export class BookingService {
   constructor(@Inject(REDIS_CLIENT) private readonly redis: Redis) {}
 
   async acquireLock(ticketId: string, userId: string): Promise<boolean> {
     const result = await this.redis.set(
       `lock:ticket:${ticketId}`,
       userId,
-      'EX', 600,
+      'EX',
+      600,
       'NX',
     );
     return result === 'OK';

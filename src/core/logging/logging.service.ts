@@ -8,90 +8,54 @@ import { LogLevel } from '../../common/enums/logs.enum';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { AsyncLocalStorage } from 'async_hooks';
-import { WideEventLog, WideEventLogDocument } from './wide-event.schema';
+import { Logging, LoggingDocument } from './logging.schema';
+import { LoggingPayload } from './interfaces/logging-payload.interface';
 
-export interface WideEventPayload {
-  requestId: string;
-  env: string;
-  service?: string;
-  action?: string;
-  context?: string;
-  method?: string;
-  path?: string;
-  statusCode?: number;
-  outcome?: string;
-  durationMs?: number;
-  user?: {
-    id?: string;
-    email?: string;
-    role?: string;
-  };
-  client?: {
-    ip: string;
-    userAgent: string;
-  };
-  event?: {
-    id?: string;
-    title?: string;
-    date?: string;
-    price?: number;
-    totalCapacity?: number;
-  };
-  error?: {
-    type: string;
-    message: string[];
-    stack?: string;
-  };
-  messages?: string[];
-  metadata?: Record<string, unknown>;
-  [key: string]: unknown;
-}
-
-export interface WideEventContext {
+export interface LoggingContext {
   traceId: string;
   requestId: string;
   env: string;
   startTime: [number, number];
-  payload: WideEventPayload;
+  payload: LoggingPayload;
   level: LogLevel;
 }
 
 @Injectable()
-export class WideEventLoggerService
+export class LoggingService
   extends ConsoleLogger
   implements LoggerService, OnModuleInit
 {
-  public static readonly storage = new AsyncLocalStorage<WideEventContext>();
+  public static readonly storage = new AsyncLocalStorage<LoggingContext>();
 
   constructor(
-    @InjectModel(WideEventLog.name)
-    private readonly logModel: Model<WideEventLogDocument>,
+    @InjectModel(Logging.name)
+    private readonly logModel: Model<LoggingDocument>,
   ) {
     super();
   }
 
   onModuleInit() {
-    this.log('WideEventLoggerService initialized', 'Logger');
+    this.log('LoggingService initialized', 'Logger');
   }
 
   /**
    * Returns the current Wide Event context if it exists.
    */
-  getStore(): WideEventContext | undefined {
-    return WideEventLoggerService.storage.getStore();
+  getStore(): LoggingContext | undefined {
+    return LoggingService.storage.getStore();
   }
 
   /**
    * Runs a function within a new Wide Event context.
    */
-  run<T>(context: WideEventContext, fn: () => T): T {
-    return WideEventLoggerService.storage.run(context, fn);
+  run<T>(context: LoggingContext, fn: () => T): T {
+    return LoggingService.storage.run(context, fn);
   }
 
   /**
    * Adds metadata or identifiers to the current Wide Event context.
    */
-  assign(payload: Partial<WideEventPayload>): void {
+  assign(payload: Partial<LoggingPayload>): void {
     const context = this.getStore();
     if (context) {
       const { metadata, messages, ...rest } = payload;
@@ -120,7 +84,7 @@ export class WideEventLoggerService
   /**
    * Persists the Wide Event to MongoDB.
    */
-  async persist(context: WideEventContext): Promise<void> {
+  async persist(context: LoggingContext): Promise<void> {
     const { payload, level } = context;
     const {
       action,
@@ -140,7 +104,7 @@ export class WideEventLoggerService
       ...rest
     } = payload;
 
-    const doc: Partial<WideEventLog> = {
+    const doc: Partial<Logging> = {
       traceId: context.traceId,
       requestId: context.requestId,
       env: context.env,
@@ -179,7 +143,7 @@ export class WideEventLoggerService
   /**
    * Outputs the Wide Event as a JSON object to the console.
    */
-  logEvent(context: WideEventContext): void {
+  logEvent(context: LoggingContext): void {
     const { level, statusCode } = context.payload; // Extract level and statusCode from payload
     const logObject = {
       timestamp: new Date().toISOString(),

@@ -1,12 +1,15 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, Types } from 'mongoose';
 import { LogLevel } from '../../common/enums/logs.enum';
-import { UserRole } from '../../common/enums/user-role.enum';
+import { UserRole } from '../../modules/user/enums/user-role.enum';
+import { Currency } from '../../common/enums';
+import { EventStatus } from '../../modules/event/enums/event-status.enum';
+import { BookingStatus } from '../../modules/booking/enums/booking-status.enum';
 
-export type WideEventLogDocument = HydratedDocument<WideEventLog>;
+export type LoggingDocument = HydratedDocument<Logging>;
 
 @Schema({ _id: false })
-class UserLogInfo {
+export class UserLogInfo {
   @Prop({ type: String })
   id?: string;
 
@@ -18,7 +21,7 @@ class UserLogInfo {
 }
 
 @Schema({ _id: false })
-class ClientLogInfo {
+export class ClientLogInfo {
   @Prop({ type: String })
   ip: string;
 
@@ -27,7 +30,7 @@ class ClientLogInfo {
 }
 
 @Schema({ _id: false })
-class ErrorLogInfo {
+export class ErrorLogInfo {
   @Prop({ type: String })
   type: string;
 
@@ -39,7 +42,7 @@ class ErrorLogInfo {
 }
 
 @Schema({ _id: false })
-class EventLogInfo {
+export class EventLogInfo {
   @Prop({ type: String })
   id?: string;
 
@@ -53,7 +56,67 @@ class EventLogInfo {
   price?: number;
 
   @Prop({ type: Number })
-  totalCapacity?: number;
+  capacity?: number;
+
+  @Prop({ type: Number })
+  availableTickets?: number;
+
+  @Prop({ type: String, enum: EventStatus })
+  status?: EventStatus;
+
+  @Prop({ type: String, enum: Currency })
+  currency?: Currency;
+}
+
+@Schema({ _id: false })
+export class PaymentLogInfo {
+  @Prop({ type: String })
+  id?: string;
+
+  @Prop({ type: Number })
+  amount?: number;
+
+  @Prop({ type: String })
+  currency?: string;
+
+  @Prop({ type: String })
+  method?: string;
+
+  @Prop({ type: String })
+  transactionId?: string;
+
+  @Prop({ type: Date })
+  paidAt?: Date;
+}
+
+@Schema({ _id: false })
+export class BookingLogInfo {
+  @Prop({ type: String })
+  id?: string;
+
+  @Prop({ type: String, enum: BookingStatus })
+  status?: BookingStatus;
+
+  @Prop({ type: String })
+  expiresAt?: string;
+
+  @Prop({ type: Number })
+  amountTotal?: number;
+
+  @Prop({ type: Number })
+  quantity?: number;
+}
+
+@Schema({ _id: false })
+export class TicketLogInfo {
+  @Prop({ type: String })
+  id?: string;
+
+  @Prop({ type: String })
+  code?: string;
+
+  @Prop({ type: String })
+  status?: string;
 }
 
 @Schema({
@@ -61,7 +124,7 @@ class EventLogInfo {
   timestamps: false,
   versionKey: false,
 })
-export class WideEventLog {
+export class Logging {
   @Prop({ type: String, required: true })
   traceId: string;
 
@@ -77,7 +140,7 @@ export class WideEventLog {
   @Prop({
     type: String,
     required: true,
-    enum: Object.values(LogLevel),
+    enum: LogLevel,
   })
   level: LogLevel;
 
@@ -114,6 +177,15 @@ export class WideEventLog {
   @Prop({ type: EventLogInfo })
   event?: EventLogInfo;
 
+  @Prop({ type: PaymentLogInfo })
+  payment?: PaymentLogInfo;
+
+  @Prop({ type: BookingLogInfo })
+  booking?: BookingLogInfo;
+
+  @Prop({ type: TicketLogInfo })
+  ticket?: TicketLogInfo;
+
   @Prop({ type: [String] })
   messages?: string[];
 
@@ -127,4 +199,4 @@ export class WideEventLog {
   paymentId?: Types.ObjectId;
 }
 
-export const WideEventLogSchema = SchemaFactory.createForClass(WideEventLog);
+export const LoggingSchema = SchemaFactory.createForClass(Logging);

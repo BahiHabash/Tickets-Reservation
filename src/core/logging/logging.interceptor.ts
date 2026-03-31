@@ -8,18 +8,15 @@ import {
 } from '@nestjs/common';
 import { Observable, throwError } from 'rxjs';
 import { tap, catchError, finalize } from 'rxjs/operators';
-import {
-  WideEventLoggerService,
-  type WideEventContext,
-} from './logger.service';
+import { LoggingService, type LoggingContext } from './logging.service';
 import { LogLevel } from '../../common/enums/logs.enum';
 import type { Response } from 'express';
 import { AppConfig } from '../config';
 
 @Injectable()
-export class WideEventInterceptor implements NestInterceptor {
+export class LoggingInterceptor implements NestInterceptor {
   constructor(
-    private readonly logger: WideEventLoggerService,
+    private readonly logger: LoggingService,
     private readonly appConfig: AppConfig,
   ) {}
 
@@ -66,13 +63,13 @@ export class WideEventInterceptor implements NestInterceptor {
         if (this.shouldLog(store)) {
           // Fire and forget persistence to background, handle catch if any
           this.logger.persist(store).catch(() => {});
-          this.logger.logEvent(store);
+          // this.logger.logEvent(store);
         }
       }),
     );
   }
 
-  private shouldLog(store: WideEventContext): boolean {
+  private shouldLog(store: LoggingContext): boolean {
     const { payload, level } = store;
     const { statusCode, durationMs } = payload;
 
