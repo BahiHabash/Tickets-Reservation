@@ -11,17 +11,18 @@ import { RegisterUserDto } from './dto/register-user.dto';
 import { LoginUserDto } from './dto/login-user.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import type { Payload } from '../../common/interfaces';
-import { WideEventLoggerService } from '../../core/logger';
+import { LoggingService } from '../../core/logging';
 import { LogAction } from '../../common/enums/logs.enum';
 import { GetUser } from './decorators/get-user.decorator';
-import { UserRole } from '../../common/enums/user-role.enum';
+import { UserRole } from './enums/user-role.enum';
 import { Roles } from './decorators/roles.decorator';
+import { formatUserLog } from '../../common/helpers';
 
 @Controller('users')
 export class UserController {
   constructor(
     private readonly userService: UserService,
-    private readonly logger: WideEventLoggerService,
+    private readonly logger: LoggingService,
   ) {}
 
   @Post('register')
@@ -49,11 +50,7 @@ export class UserController {
   async getProfile(@GetUser() user: Payload) {
     this.logger.assign({
       action: LogAction.GET_PROFILE,
-      user: {
-        id: user.sub,
-        email: user.email,
-        role: user.role,
-      },
+      user: formatUserLog(user),
       messages: [`Fetch profile request received.`],
     });
 
@@ -66,11 +63,7 @@ export class UserController {
   async getAllUsers(@GetUser() user: Payload) {
     this.logger.assign({
       action: LogAction.GET_ALL_USERS,
-      user: {
-        id: user.sub,
-        email: user.email,
-        role: user.role,
-      },
+      user: formatUserLog(user),
       messages: [`Fetch all users request received.`],
     });
     return await this.userService.findAll();

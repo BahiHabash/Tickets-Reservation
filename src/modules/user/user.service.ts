@@ -9,18 +9,19 @@ import { Model } from 'mongoose';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { User } from './schemas/user.schema';
-import { UserRole } from '../../common/enums/user-role.enum';
+import { UserRole } from './enums/user-role.enum';
 import { RegisterUserDto } from './dto/register-user.dto';
 import { LoginUserDto } from './dto/login-user.dto';
-import { WideEventLoggerService } from '../../core/logger';
+import { LoggingService } from '../../core/logging';
 import type { Payload } from '../../common/interfaces/auth-token.interface';
+import { formatUserLog } from '../../common/helpers';
 
 @Injectable()
 export class UserService {
   constructor(
     @InjectModel(User.name) private readonly userModel: Model<User>,
     private readonly jwtService: JwtService,
-    private readonly logger: WideEventLoggerService,
+    private readonly logger: LoggingService,
   ) {}
 
   async register(registerDto: RegisterUserDto) {
@@ -43,11 +44,7 @@ export class UserService {
     await user.save();
 
     this.logger.assign({
-      user: {
-        id: user._id.toString(),
-        email: user.email,
-        role: user.role,
-      },
+      user: formatUserLog(user),
       messages: ['User registered successfully'],
     });
 
@@ -65,11 +62,7 @@ export class UserService {
     }
 
     this.logger.assign({
-      user: {
-        id: user._id.toString(),
-        email: user.email,
-        role: user.role,
-      },
+      user: formatUserLog(user),
       messages: ['Authentication successful'],
     });
 
@@ -95,11 +88,7 @@ export class UserService {
     }
 
     this.logger.assign({
-      user: {
-        id: userProfile._id.toString(),
-        email: userProfile.email,
-        role: userProfile.role,
-      },
+      user: formatUserLog(userProfile),
       messages: ['Profile fetched successfully'],
     });
 

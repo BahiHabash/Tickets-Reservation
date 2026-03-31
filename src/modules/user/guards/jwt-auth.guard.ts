@@ -8,16 +8,17 @@ import { JwtService } from '@nestjs/jwt';
 import { Reflector } from '@nestjs/core';
 import { Request } from 'express';
 import type { Payload } from '../../../common/interfaces';
-import { IS_ANY_ROLE_KEY } from '../decorators/guest.decorator';
-import { UserRole } from '../../../common/enums/user-role.enum';
-import { WideEventLoggerService } from '../../../core/logger';
+import { IS_ANY_ROLE_KEY } from '../decorators/any-role.decorator';
+import { UserRole } from '../enums/user-role.enum';
+import { LoggingService } from '../../../core/logging';
+import { formatUserLog } from '../../../common/helpers';
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
   constructor(
     private readonly jwtService: JwtService,
     private readonly reflector: Reflector,
-    private readonly logger: WideEventLoggerService,
+    private readonly logger: LoggingService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -39,6 +40,7 @@ export class JwtAuthGuard implements CanActivate {
         return true;
       }
       this.logger.assign({
+        user: { role: UserRole.GUEST },
         messages: ['JWT Authorization failed: Token not found'],
       });
       throw new UnauthorizedException('Token not found');
@@ -47,11 +49,7 @@ export class JwtAuthGuard implements CanActivate {
     try {
       const payload: Payload = await this.jwtService.verifyAsync(token);
       this.logger.assign({
-        user: {
-          id: payload.sub,
-          email: payload.email,
-          role: payload.role,
-        },
+        user: formatUserLog(payload),
         messages: [`Token verified successfully.`],
       });
       request['user'] = payload;
@@ -69,6 +67,7 @@ export class JwtAuthGuard implements CanActivate {
       }
 
       this.logger.assign({
+        user: { role: UserRole.GUEST },
         messages: [`JWT Verification failed: ${errorMessage}`],
       });
 

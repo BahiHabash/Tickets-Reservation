@@ -1,9 +1,10 @@
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
-import type { RequestWithUser } from '../../../common/interfaces';
+import type { Payload, RequestWithUser } from '../../../common/interfaces';
 
 export const GetUser = createParamDecorator(
-  (data: unknown, ctx: ExecutionContext) => {
+  (data: keyof Payload | undefined, ctx: ExecutionContext) => {
     const request = ctx.switchToHttp().getRequest<RequestWithUser>();
-    return request.user;
+    const user = request.user;
+    return data ? user?.[data] : user;
   },
 );
