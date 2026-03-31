@@ -30,5 +30,9 @@ export class CreateEventDto {
 
   @IsNumber()
   @Min(1)
-  totalCapacity: number;
+  capacity: number;
+
+  @IsString()
+  @IsOptional()
+  currency?: string;
 }

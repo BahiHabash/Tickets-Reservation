@@ -7,7 +7,6 @@ import {
   Param,
   Delete,
   UseGuards,
-  Request,
 } from '@nestjs/common';
 import { ParseObjectIdPipe } from '../../common/pipes/parse-object-id.pipe';
 import { EventService } from './event.service';
@@ -16,34 +15,25 @@ import { UpdateEventDto } from './dto/update-event.dto';
 import { JwtAuthGuard } from '../user/guards/jwt-auth.guard';
 import { RolesGuard } from '../user/guards/roles.guard';
 import { Roles } from '../user/decorators/roles.decorator';
-import { AnyRole } from '../user/decorators/guest.decorator';
-import { UserRole } from '../../common/enums/user-role.enum';
-import { WideEventLoggerService } from '../../core/logger';
+import { AnyRole } from '../user/decorators/any-role.decorator';
+import { UserRole } from '../user/enums/user-role.enum';
+import { LoggingService } from '../../core/logging';
 import { LogAction } from '../../common/enums/logs.enum';
-import type { Payload, RequestWithUser } from '../../common/interfaces';
-import { GetUser } from '../user/decorators/get-user.decorator';
+import type { Types } from 'mongoose';
 
 @Controller('events')
 export class EventController {
   constructor(
     private readonly eventService: EventService,
-    private readonly logger: WideEventLoggerService,
+    private readonly logger: LoggingService,
   ) {}
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
-  async create(
-    @Body() createEventDto: CreateEventDto,
-    @Request() req: RequestWithUser,
-  ) {
+  async create(@Body() createEventDto: CreateEventDto) {
     this.logger.assign({
       action: LogAction.CREATE_EVENT,
-      user: {
-        id: req.user.sub,
-        email: req.user.email,
-        role: req.user.role,
-      },
       messages: [`Create event request received.`],
     });
 
@@ -55,14 +45,9 @@ export class EventController {
   @Get()
   @UseGuards(JwtAuthGuard)
   @AnyRole()
-  async findAll(@GetUser() user: Payload) {
+  async findAll() {
     this.logger.assign({
       action: LogAction.GET_EVENTS,
-      user: {
-        id: user.sub,
-        email: user.email,
-        role: user.role,
-      },
       messages: ['Fetching all events'],
     });
 
@@ -80,17 +65,9 @@ export class EventController {
   @Get(':id')
   @UseGuards(JwtAuthGuard)
   @AnyRole()
-  async findOne(
-    @Param('id', ParseObjectIdPipe) id: string,
-    @GetUser() user: Payload,
-  ) {
+  async findOne(@Param('id', ParseObjectIdPipe) id: Types.ObjectId) {
     this.logger.assign({
       action: LogAction.GET_EVENT,
-      user: {
-        id: user.sub,
-        email: user.email,
-        role: user.role,
-      },
       messages: [`Fetch event details request received.`],
     });
     return this.eventService.findOne(id);
@@ -100,17 +77,11 @@ export class EventController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   async update(
-    @Param('id', ParseObjectIdPipe) id: string,
+    @Param('id', ParseObjectIdPipe) id: Types.ObjectId,
     @Body() updateEventDto: UpdateEventDto,
-    @GetUser() user: Payload,
   ) {
     this.logger.assign({
       action: LogAction.UPDATE_EVENT,
-      user: {
-        id: user.sub,
-        email: user.email,
-        role: user.role,
-      },
       messages: [`Update event request received.`],
     });
 
@@ -120,20 +91,36 @@ export class EventController {
   @Delete(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
-  async remove(
-    @Param('id', ParseObjectIdPipe) id: string,
-    @GetUser() user: Payload,
-  ) {
+  async remove(@Param('id', ParseObjectIdPipe) id: Types.ObjectId) {
     this.logger.assign({
       action: LogAction.DELETE_EVENT,
-      user: {
-        id: user.sub,
-        email: user.email,
-        role: user.role,
-      },
       messages: [`Delete event request received.`],
     });
 
     return this.eventService.remove(id);
+  }
+
+  @Post(':id/publish')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  async publish(@Param('id', ParseObjectIdPipe) id: Types.ObjectId) {
+    this.logger.assign({
+      action: LogAction.PUBLISH_EVENT,
+      messages: ['Publish event request received.'],
+    });
+
+    return this.eventService.publishEvent(id);
+  }
+
+  @Post(':id/cancel')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  async cancel(@Param('id', ParseObjectIdPipe) id: Types.ObjectId) {
+    this.logger.assign({
+      action: LogAction.CANCEL_EVENT,
+      messages: ['Cancel event request received'],
+    });
+
+    return this.eventService.cancelEvent(id);
   }
 }

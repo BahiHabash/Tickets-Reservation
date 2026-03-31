@@ -4,7 +4,9 @@ import {
   IsDateString,
   IsNumber,
   Min,
+  IsEnum,
 } from 'class-validator';
+import { EventStatus } from '../enums/event-status.enum';
 
 export class UpdateEventDto {
   @IsString()
@@ -31,5 +33,13 @@ export class UpdateEventDto {
   @IsNumber()
   @Min(1)
   @IsOptional()
-  totalCapacity?: number;
+  capacity?: number;
+
+  @IsString()
+  @IsOptional()
+  currency?: string;
+
+  @IsEnum(EventStatus)
+  @IsOptional()
+  status?: EventStatus;
 }
