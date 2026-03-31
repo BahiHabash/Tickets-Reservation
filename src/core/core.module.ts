@@ -2,8 +2,9 @@ import { Module, Global } from '@nestjs/common';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { AppConfigModule } from './config';
 import { DatabaseModule } from './database';
-import { RedisModule } from './redis';
-import { LoggerModule } from './logger';
+import { CachingModule } from './caching';
+import { QueueModule } from './queue';
+import { LoggingModule } from './logging';
 import { JwtModule } from './jwt';
 
 @Global()
@@ -11,16 +12,18 @@ import { JwtModule } from './jwt';
   imports: [
     AppConfigModule,
     DatabaseModule,
-    RedisModule,
-    LoggerModule,
+    CachingModule,
+    QueueModule,
+    LoggingModule,
     JwtModule,
     EventEmitterModule.forRoot(),
   ],
   exports: [
     AppConfigModule,
     DatabaseModule,
-    RedisModule,
-    LoggerModule,
+    CachingModule,
+    QueueModule,
+    LoggingModule,
     JwtModule,
   ],
 })

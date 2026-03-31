@@ -14,59 +14,72 @@ The project follows a modular architecture designed for scalability and maintain
 
 All infrastructure logic is encapsulated within the `CoreModule` and its specialized sub-modules:
 
-| Sub-module | Purpose | Global? |
-|------------|---------|---------|
-| **Config** | Robust environment validation (via Joi) and namespaced configurations. | ✅ |
-| **Database** | Managed MongoDB connection and base abstract repositories for DAL. | ❌ |
-| **Redis** | High-performance `ioredis` client for distributed locking and caching. | ✅ |
-| **Logger** | **Mandatory** structured Wide-Event logging system. | ✅ |
+| Sub-module   | Purpose                                                                | Global? |
+| ------------ | ---------------------------------------------------------------------- | ------- |
+| **Config**   | Robust environment validation (via Joi) and namespaced configurations. | ✅      |
+| **Database** | Managed MongoDB connection and base abstract repositories for DAL.     | ❌      |
+| **Redis**    | High-performance `ioredis` client for distributed locking and caching. | ✅      |
+| **Logger**   | **Mandatory** structured Wide-Event logging system.                    | ✅      |
 
 ### Using Core Services
+
 Since most core modules are global, you can inject their services directly into any provided class:
+
 ```typescript
 constructor(private readonly appConfig: AppConfig) {}
 ```
 
 ## 📝 Logging Strategy
 
-**Strict Requirement**: Every log in the system must use the `WideEventLoggerService` (exported via `LoggerModule`).
+**Strict Requirement**: Every log in the system must use the `LoggingService` (exported via `LoggerModule`).
 
 ### Why?
+
 Unlike default string-based loggers, this service persists **Structured Wide Events** to MongoDB. This enables complex auditing, performance tracking, and troubleshooting without manual log parsing.
 
 ### How to Use
-Always inject `WideEventLoggerService` or use it as the default NestJS logger:
+
+Always inject `LoggingService` or use it as the default NestJS logger:
 
 ```typescript
 // 1. Context logging (simulating standard logger)
 this.logger.log('Payment processed', 'PaymentsService');
 
 // 2. Structured logging (Mandatory for critical paths)
-this.logger.warn('Inventory threshold reached', {
-  action: 'LOW_INVENTORY_DETECTED',
-  eventId: 'evt_123',
-  metadata: { stockLeft: 5 }
-}, 'InventoryService');
+this.logger.warn(
+  'Inventory threshold reached',
+  {
+    action: 'LOW_INVENTORY_DETECTED',
+    eventId: 'evt_123',
+    metadata: { stockLeft: 5 },
+  },
+  'InventoryService',
+);
 ```
 
 ## 🛠️ Project Setup
 
 ### 1. Prerequisites
+
 - Node.js v20.17+
 - Docker & Docker Compose
 
 ### 2. Infrastructure
+
 Spin up the required infrastructure (Redis) using Docker Compose:
+
 ```bash
 docker-compose up -d
 ```
 
 ### 3. Installation
+
 ```bash
 npm install
 ```
 
 ### 4. Running
+
 ```bash
 # Development (with watch mode)
 npm run start:dev
@@ -77,6 +90,7 @@ npm run start:prod
 ```
 
 ## 🧪 Verification
+
 ```bash
 # Unit tests
 npm test
@@ -86,4 +100,5 @@ npm run test:e2e
 ```
 
 ## 📜 License
+
 Unlicensed (Private Project)

@@ -2,7 +2,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { AppConfig } from './core/config';
-import { WideEventLoggerService } from './core/logger';
+import { LoggingService } from './core/logging';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
@@ -13,7 +13,7 @@ async function bootstrap() {
   const appConfig = app.get(AppConfig);
 
   // Custom logger
-  const logger = app.get(WideEventLoggerService);
+  const logger = app.get(LoggingService);
   app.useLogger(logger);
 
   // Global prefix from config (e.g. "api/v1")

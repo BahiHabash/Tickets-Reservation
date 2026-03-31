@@ -24,8 +24,8 @@ export const envValidationSchema = Joi.object({
   REDIS_HOST: Joi.string().default('localhost'),
   REDIS_PORT: Joi.number().default(6379),
   REDIS_PASSWORD: Joi.string().allow('').default(''),
-
-  // Ticket reservation
+  EVENT_META_TTL: Joi.string().default('24h'),
+  IDEMPOTENCY_TTL: Joi.string().default('24h'),
   TICKET_HOLDING_TTL: Joi.string().default('10m'),
 
   // JWT
